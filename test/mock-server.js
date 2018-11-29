@@ -33,7 +33,7 @@ module.exports = port => {
 				return;
 			}
 
-			_bodyParser(req, res, function(err) {
+			_bodyParser(req, res, function (err) {
 				const data = req.body.testingData;
 				const reqMethod = req.method;
 				const reqUrl = req.url;
@@ -50,6 +50,11 @@ module.exports = port => {
 
 				if (reqUrl === validUrls.post && dataCheck && reqMethod === 'POST') {
 					sendResponse(res, 200, sampleResponses.post200);
+					return;
+				}
+
+				if (reqUrl === validUrls.internalServerError && dataCheck && reqMethod === 'POST') {
+					sendResponse(res, 500, sampleResponses['500']);
 					return;
 				}
 

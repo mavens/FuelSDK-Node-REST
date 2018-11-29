@@ -20,7 +20,7 @@ const requestOptions = {
 	uri: routes.get
 };
 const server = http.createServer(function (request, response) {
-	response.writeHead(200, {'Content-Type': 'application/json'});
+	response.writeHead(200, { 'Content-Type': 'application/json' });
 	response.write(proxyResponseBody);
 	response.end();
 });
@@ -62,10 +62,13 @@ describe('Proxy support', function () {
 
 	it('should error if proxy option passed incorrectly', done => {
 		initOptions.globalReqOptions.proxy.port = proxyErrorPort;
+		initOptions.retryOptions = {
+			maxAttempts: 1,
+		};
 		restClient = new FuelRest(initOptions);
 		restClient.AuthClient.accessToken = accessToken;
 		restClient.AuthClient.expiration = expiration;
-		restClient.apiRequest(requestOptions, (err) => {
+		restClient.apiRequest(requestOptions, (err, response, body) => {
 			expect(err.code).to.equal('ECONNREFUSED');
 			expect(err.port).to.equal(proxyErrorPort);
 			done();

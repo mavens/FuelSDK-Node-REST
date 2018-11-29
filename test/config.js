@@ -14,6 +14,7 @@ module.exports = {
 		queryGet: '/get/test?test=1',
 		notJson: '/not/json/response',
 		patch: '/patch',
-		invalidToken: '/invalid/token'
+		invalidToken: '/invalid/token',
+		internalServerError: '/internal/server/error',
 	}
 };

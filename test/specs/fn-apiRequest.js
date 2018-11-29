@@ -11,11 +11,12 @@ const FuelRest = require('../../lib/fuel-rest');
 const mockServer = require('../mock-server');
 const routes = require('../config').routes;
 const sinon = require('sinon');
+const request = require('requestretry');
 
 const port = 4550;
 const localhost = `http://127.0.0.1:${port}`;
 
-describe('apiRequest method', function() {
+describe('apiRequest method', function () {
 	'use strict';
 
 	let RestClient;
@@ -53,7 +54,7 @@ describe('apiRequest method', function() {
 
 	it('should throw an error when no options are passed', () => {
 		try {
-			RestClient.apiRequest(null, () => {});
+			RestClient.apiRequest(null, () => { });
 		} catch (err) {
 			expect(err.name).to.equal('TypeError');
 			expect(err.message).to.equal('options argument is required');
@@ -85,6 +86,21 @@ describe('apiRequest method', function() {
 	});
 
 	it('should add extra options to request module - testing qs', done => {
+		const options = {
+			...initOptions,
+			retryOptions: {
+				maxAttempts: 1,
+				retryDelay: 1000,
+				fullResponse: true,
+				retryStrategy: request.RetryStrategies.HTTPOrNetworkError, // (default) retry on 5xx or network errors
+			}
+		};
+		RestClient = new FuelRest(options);
+
+		// faking auth
+		RestClient.AuthClient.accessToken = 'testForRest';
+		RestClient.AuthClient.expiration = 111111111111;
+
 		requestOptions.qs = {
 			test: 1
 		};
@@ -306,7 +322,7 @@ describe('apiRequest method', function() {
 
 			RestClient.apiRequest(
 				requestOptions,
-				function() {
+				function () {
 					expect(invalidateSpy.callCount).to.equal(1);
 
 					FuelAuth.prototype.getAccessToken.restore();
@@ -318,5 +334,32 @@ describe('apiRequest method', function() {
 				true
 			);
 		});
+	});
+
+	describe('retry', () => {
+		it('retry internal server errors', done => {
+			const options = {
+				...initOptions,
+				retryOptions: {
+					maxAttempts: 3,
+					retryDelay: 1000,
+					retryStrategy: request.RetryStrategies.HTTPOrNetworkError, // (default) retry on 5xx or network errors
+				}
+			};
+			RestClient = new FuelRest(options);
+			RestClient.AuthClient.accessToken = 'testForRest';
+			RestClient.AuthClient.expiration = 111111111111;
+
+			requestOptions = {
+				method: 'POST',
+				uri: routes.internalServerError
+			};
+
+			RestClient.apiRequest(requestOptions, (err, response, body) => {
+				expect(response.res.attempts).to.equal(3);
+				expect(response.res.req.method).to.equal('POST');
+				done();
+			});
+		}).timeout(7000);
 	});
 });
